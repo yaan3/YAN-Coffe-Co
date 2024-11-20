@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sales Report</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        tfoot {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sales Report</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Order Number</th>
+                <th>Date</th>
+                <th>User</th>
+                <th>Total</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.order_number }}</td>
+                <td>{{ order.created_at }}</td>
+                <td>{{ order.user.username }}</td>
+                <td>{{ order.order_total }}</td>
+                <td>{{ order.status }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3">Total Orders</td>
+                <td colspan="2">{{ total_count }}</td>
+            </tr>
+            <tr>
+                <td colspan="3">Total Sum</td>
+                <td colspan="2">{{ total_sum }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</body>
+</html>
