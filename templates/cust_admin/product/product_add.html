@@ -47,14 +47,14 @@
                             </select>
                         </div>
                         <div class="col-sm-6 mb-3">
-                            <label for="subcategory" class="form-label">Sub-category</label>
-                            <select id="subcategory" name="subcategory" class="form-select" required>
+                            {% comment %} <label for="subcategory" class="form-label">Sub-category</label>
+                            <select id="subcategory" name="subcategory" class="form-select" >
                                 <option value="" disabled selected>Select Subcategory</option>
                                 {% for subcategory in subcategories %}
                                   <option value="{{ subcategory.sid }}">{{ subcategory.sub_name }}</option>
                                 {% endfor %}
-                            </select>
-                        </div>
+                            </select>  {% endcomment %}
+                        </div> 
                         <div class="col-sm-6 mb-1">
                             <input type="checkbox" name="availability" class="form-check-input">
                             <label for="availability" class="form-check-label">Available</label>

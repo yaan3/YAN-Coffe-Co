@@ -12,9 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,16 +39,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',   
+    'django.contrib.sites',   
     'sweetify',
     'accounts',
     'cust_admin',
     'cust_auth_admin',
     'store',
     'social_django',
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
+    # 'allauth',
+    # 'allauth.account',
+    # 'allauth.socialaccount',
+    # 'allauth.socialaccount.providers.google',
+    'user_cart',
+    'django_extensions',
 ]
+
+SITE_ID = 1
 
 SWEETIFY_SWEETALERT_LIBRARY = 'sweetalert2'
 
@@ -63,7 +67,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
-    'allauth.account.middleware.AccountMiddleware',  # Ensure this is included
+    # 'allauth.account.middleware.AccountMiddleware',  # Ensure this is included
 ]
 
 ROOT_URLCONF = 'Yan.urls'
@@ -79,9 +83,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'django.template.context_processors.request',
+                'user_cart.context_processors.cart_item_count',
                 'social_django.context_processors.backends',
-                # 'allauth.socialaccount.context_processors.socialaccount',  # Remove this line
+                'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -97,7 +101,7 @@ WSGI_APPLICATION = 'Yan.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'yancoffeedb',
+        'NAME': 'yan',
         'USER': 'postgres',
         'PASSWORD': 'Yan@1234',
         'HOST': 'localhost',  # or IP address if hosted remotely
@@ -168,28 +172,44 @@ EMAIL_HOST_USER = 'amalnian@gmail.com'
 EMAIL_HOST_PASSWORD = 'esfw uaoj yxpu qzwk '
 
 # Authentication backends
+# AUTHENTICATION_BACKENDS = [
+#     'accounts.backends.EmailBackend',
+#     'social_core.backends.google.GoogleOAuth2',
+#     'django.contrib.auth.backends.ModelBackend',
+# ]
+# AUTHENTICATION_BACKENDS = [
+    
+#     'django.contrib.auth.backends.ModelBackend',
+
+#     'allauth.account.auth_backends.AuthenticationBackend',
+# ] 
 AUTHENTICATION_BACKENDS = [
     'accounts.backends.EmailBackend',
+    'social_core.backends.google.GoogleOAuth2',
     'django.contrib.auth.backends.ModelBackend',
-    'social_core.backends.google.GoogleOAuth2'
-    # 'allauth.account.auth_backends.AuthenticationBackend',
 ]
+
+SOCIAL_AUTH_URL_NAMESPACE = 'social'                                                                                            
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '450839854654-pj3j9cbteurjqlmsa3imos9nsu179uja.apps.googleusercontent.com' 
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
 
 
 # Login/Logout URLs
-LOGIN_URL = 'accounts:login'
-LOGIN_REDIRECT_URL = 'store:home'
-LOGOUT_URL = 'accounts:logout'
-LOGOUT_REDIRECT_URL = 'accounts:login'
+# LOGIN_URL = 'accounts:login'
+# LOGIN_REDIRECT_URL = 'store:home'
+# LOGOUT_URL = 'accounts:logout'
+# LOGOUT_REDIRECT_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
 
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY="331626663021-qer6va73hpq2e01tsk84rg08meunp993.apps.googleusercontent.com"
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET="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"
-SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = [
-    ('first_name', 'first_name'),
-    ('last_name', 'last_name'),
-    ('email', 'email'),
-]
+# SOCIAL_AUTH_GOOGLE_OAUTH2_KEY="331626663021-qer6va73hpq2e01tsk84rg08meunp993.apps.googleusercontent.com"
+# SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET="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"
+# SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = [
+#     ('first_name', 'first_name'),
+#     ('last_name', 'last_name'),
+#     ('email', 'email'),
+# ]
 
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
@@ -198,7 +218,54 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_user',
     'social_core.pipeline.user.get_username',
     'social_core.pipeline.user.create_user',
+    'accounts.pipeline.save_user_details',  # Add this function to save user details
+    'accounts.pipeline.set_user_phone_number',  # Add this function to set phone number
+    'accounts.pipeline.activate_user',  # Add this function to activate user
+    'accounts.pipeline.check_if_user_blocked',  # Add this function to check if user is blocked
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
 )
+
+
+# SOCIALACCOUNT_PROVIDERS = {
+#     'google': {
+#         'APP': {
+#             'client_id': '331626663021-0gqdkt7tom71r46j1eh4bqli7e2ntnor.apps.googleusercontent.com',
+#             'secret': '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',
+#             'key': '',
+#         }
+#     }
+# }
+
+RAZORPAY_KEY_ID = 'rzp_test_rBxYTsD18FDhzg'
+RAZORPAY_KEY_SECRET = 'IP55ASWmlMiT9pgpHbGnsvC5'
+
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'openid',
+    'profile',
+    'email'
+]
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_EXTRA_DATA = [
+    'first_name',
+    'last_name'
+]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'social_django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+} 
+

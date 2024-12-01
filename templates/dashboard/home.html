@@ -3,34 +3,47 @@
     
     {% block content %}
     <style>
-        /* Ensure that the product grid adapts to different screen sizes */
-        .product-grid-3 {
-            display: flex;
-            flex-wrap: wrap;
+        /* Full-width styling for the banner */
+        .home-slider {
+            width: 100%;
+            margin: 0;
+            padding: 0;
         }
-
-        .product-grid-3 .col-lg-4, .product-grid-3 .col-md-6, .product-grid-3 .col-sm-6 {
-            margin-bottom: 30px;
+    
+        .hero-slider-1 {
+            width: 100%;
         }
-
+    
+        .hero-slider-1 .container {
+            width: 100%;
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .single-slider-img img {
+            width: 100%;
+            height: auto; /* Maintain aspect ratio */
+        }
     </style>
+    
     <main class="main">       
-        <section class="home-slider position-relative pt-50">
+        <section class="home-slider position-relative pt-50">                           
             <div class="hero-slider-1 dot-style-1 dot-style-1-position-1">
                 <div class="single-hero-slider single-animation-wrap">
                     <div class="container">
-                        <div class="row align-items-center slider-animated-1">
+                        <div class="row align-items-center slider-animated-1" style={width:100%}>
                             <div class="single-slider-img single-slider-img-1">
                                 <img class="animated slider-1 rounded-4" src="{% static 'store/imgs/slider/banner1.webp' %}" alt="">
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>      
                 <div class="single-hero-slider single-animation-wrap">
                     <div class="container">
                         <div class="row align-items-center slider-animated-1">
                                 <div class="single-slider-img single-slider-img-1">
-                                    <img class="animated slider-1 rounded-4" src="{% static 'store/imgs/slider/banner1.webp' %}" alt="">
+                                    <img class="animated slider-1 rounded-4" src="{% static 'store/imgs/slider/banner4.webp' %}" alt="">
                                 </div>
                             </div>
                     </div>
@@ -38,7 +51,7 @@
                 <div class="single-hero-slider single-animation-wrap">
                     <div class="container">   
                             <div class="single-slider-img single-slider-img-1">
-                                <img class="animated slider-1 rounded-4" src="{% static 'store/imgs/slider/banner1.webp' %}" alt="">
+                                <img class="animated slider-1 rounded-4" src="{% static 'store/imgs/slider/banner5.webp' %}" alt="">
                             </div>
                         </div>
                     </div>
@@ -134,7 +147,7 @@
                                             {% endif %}
                                         </div>
                                         <div class="product-action-1 show">
-                                            {% comment %} <a aria-label="Add To Wishlist" class="action-btn hover-up" href="{% url 'store:add_to_wishlist' product.p_id %}"><i class="fi-rs-heart"></i></a> {% endcomment %}
+                                            <a aria-label="Add To Wishlist" class="action-btn hover-up" href="{% url 'store:add_to_wishlist' product.p_id %}"><i class="fi-rs-heart"></i></a> 
                                         </div>
                                     </div>
                                 </div>
@@ -190,7 +203,7 @@
                                         {% if product.id in user_wishlist %}
                                             <a aria-label="Remove from Wishlist" class="action-btn hover-up active" href="{% url 'store:delete_wishlist' product.p_id %}"><i class="fi-rs-heart"></i></a>
                                         {% else %}
-                                            {% comment %} <a aria-label="Add To Wishlist" class="action-btn hover-up" href="{% url 'store:add_to_wishlist' product.p_id %}"><i class="fi-rs-heart"></i></a> {% endcomment %}
+                                            <a aria-label="Add To Wishlist" class="action-btn hover-up" href="{% url 'store:add_to_wishlist' product.p_id %}"><i class="fi-rs-heart"></i></a>
                                         {% endif %}                                        
                                         </div>
                                     </div>
@@ -245,7 +258,7 @@
                                             {% endif %}
                                         </div>
                                         <div class="product-action-1 show">
-                                            <a aria-label="Add To Wishlist" class="action-btn hover-up" href="{% url 'store:add_to_wishlist' product.p_id %}"><i class="fi-rs-heart"></i></a>
+                                            <a aria-label="Add To Wishlist" class="action-btn hover-up" href="{% url 'store:add_to_wishlist' product.p_id %}"><i class="fi-rs-heart"></i></a> 
                                         </div>
                                     </div>
                                 </div>

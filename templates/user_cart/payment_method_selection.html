@@ -59,8 +59,8 @@
                                     </tr>
                                     {% endfor %}
                                     <tr><td class="cart_total_label">Cart Total</td><td colspan="2" class="cart_total_amount">₹{{ total_cart_price }}</td></tr>
-                                    <tr><td class="cart_total_label">Discount</td><td colspan="2" class="cart_total_amount">₹{{ discounts }}</td></tr>
-                                    <tr><td class="cart_total_label">Total After Discount</td><td colspan="2" class="cart_total_amount">₹{{ total_after_discount }}</td></tr>
+                                    {% comment %} <tr><td class="cart_total_label">Discount</td><td colspan="2" class="cart_total_amount">₹{{ discounts }}</td></tr>
+                                    <tr><td class="cart_total_label">Total After Discount</td><td colspan="2" class="cart_total_amount">₹{{ total_after_discount }}</td></tr> {% endcomment %}
                                 </tbody>
                             </table>
                         </div>
@@ -80,7 +80,7 @@
                         <!-- Payment Method Selection Form -->
                         <div class="row">
                             <!-- Cash on Delivery Option -->
-                            {% if total_after_discount < 1000 %}
+                            {% comment %} {% if total_after_discount < 1000 %} {% endcomment %}
                             <div class="col-md-4 mb-3">
                                 <form id="cod-form" method="POST" action="{% url 'cart:payment_method_selection' order.id %}">
                                     {% csrf_token %}
@@ -88,7 +88,7 @@
                                     <button type="submit" class="btn btn-primary btn-block">Cash on Delivery</button>
                                 </form>
                             </div>
-                            {% endif %}
+                            {% comment %} {% endif %} {% endcomment %}
                             
                             <!-- Wallet Payment Option -->
                             <div class="col-md-4 mb-3">

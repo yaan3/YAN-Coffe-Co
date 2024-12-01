@@ -18,11 +18,7 @@
             </div>
             <div class="modal-body">
                 <form method="POST" action="{% url 'store:order_return' order.id %}">
-                    {% csrf_token %}
-                    <div class="col-sm-6 mb-1">
-                        <input type="checkbox" name="sizing_issues" class="form-check-input align-middle" id="sizing-issues">
-                        <label for="sizing-issues" class="form-check-label">Sizing or fit issues</label>
-                    </div>
+                    {% csrf_token %}    
                     <div class="col-sm-6 mb-1">
                         <input type="checkbox" name="damaged_item" class="form-check-input align-middle" id="damaged-item">
                         <label for="damaged-item" class="form-check-label">Damaged or Defective item</label>

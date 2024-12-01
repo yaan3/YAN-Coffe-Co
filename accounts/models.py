@@ -9,7 +9,7 @@ import random
 import string
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, first_name=None, last_name=None, username=None, password=None, phone_number=None, **extra_fields):
+    def create_user(self, email, first_name=None, last_name=None, username=None, password=None, phone_number=None, referral_code=None, **extra_fields):
         if not email:
             raise ValueError('The Email field must be set')
         if not username:
@@ -21,11 +21,15 @@ class UserManager(BaseUserManager):
             last_name=last_name or '',    # Ensure last_name defaults to an empty string
             username=username,
             phone_number=phone_number,  # Include phone_number
+            referral_code=referral_code,
             **extra_fields
         )
         user.set_password(password)
         user.save(using=self._db)
 
+        # Create an empty wallet for the user (assuming a Wallet model exists)
+        Wallet.objects.create(user=user)
+        Referral.objects.create(user=user)
 
         return user
 
@@ -55,6 +59,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     verified = models.BooleanField(default=False)
     email_verified = models.BooleanField(default=False)
+    referral_code = models.CharField(max_length=50, unique=True, null=True, blank=True)
 
     date_joined = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(auto_now=True)
@@ -64,6 +69,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
     is_superadmin = models.BooleanField(default=False)
+
+    is_blocked = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
@@ -80,7 +87,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def has_module_perms(self, app_label):
         return True
-    
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     dp_img = models.ImageField(upload_to='image', blank=True, null=True)
@@ -88,15 +95,42 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"Profile of {self.user.username}"
-    
+
 class Address(models.Model):
-    user = models.ForeignKey(User, on_delete=models.Cascade)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     street_address = models.CharField(max_length=200)
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
-    postal_code = models.CharField(max_length=100)
-    coutry = models.CharField(max_length=100)
+    postal_code = models.CharField(max_length=20)
+    country = models.CharField(max_length=100)
     is_default = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.street_address}, {self.city}, {self.state} - {self.postal_code}"
+
+class Wallet(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name_plural = 'Wallet'
+
+    def __str__(self):
+        return self.user.email
+
+class WalletHistory(models.Model):
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE)
+    transaction_type = models.CharField(null=True, blank=True, max_length=20)
+    created_at = models.DateTimeField(default=timezone.now)
+    amount = models.IntegerField(null=True)
+    reason = models.CharField(null=True, blank=True, max_length=200)
+
+
+class Referral(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='sent_referrals', default='')
+    my_referral = models.TextField(default=uuid.uuid4, blank=True)
+    reffered_code = models.CharField(max_length=200, null=True, blank=True, default='')
+
+    def __str__(self):
+        return f"{self.user.username}"

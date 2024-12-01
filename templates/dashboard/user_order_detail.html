@@ -108,7 +108,7 @@
 
     <div class="button-container">
         <a href="{% url 'store:home' %}" class="back-to-shop">Continue Shopping</a>&nbsp;&nbsp;&nbsp;&nbsp;
-        <a href="{% url 'cart:order_invoice' order.id %}" class="btn btn-primary ">Download Invoice</a>
+        {% comment %} <a href="{% url 'cart:order_invoice' order.id %}" class="btn btn-primary ">Download Invoice</a> {% endcomment %}
 
         
         {% if order.status == 'Delivered' %}

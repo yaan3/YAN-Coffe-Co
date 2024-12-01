@@ -1,8 +1,9 @@
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse, HttpResponseNotFound, Http404, HttpResponseServerError, HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import *
+from .models import Coupon
 from decimal import Decimal
-from accounts.models import User
+from accounts.models import User, Address
 from django.db.models import Sum, Min, Max
 from django.core.mail import send_mail
 from django.views.decorators.http import require_POST
@@ -12,12 +13,14 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
 from django.template.defaultfilters import linebreaksbr
+from user_cart.views import checkout
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 import sweetify
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import F, ExpressionWrapper, DecimalField
 from store.decorators import blocked_user_required
+from django.template.loader import render_to_string
 
 
 def get_common_context():
@@ -40,11 +43,12 @@ def home(request):
     new_added_products = products.filter(latest=True)
     
     # Get the 'Poster' subcategory
-    poster_subcategory = Subcategory.objects.filter(sub_name='Posters').first()
     
     # Filter products by the 'Poster' subcategory
-    poster_products = products.filter(sub_category=poster_subcategory) if poster_subcategory else Product.objects.none()
-    print(poster_products,'poster')
+    # Apply offers
+    featured_products = [apply_offers(p) for p in featured_products]
+    popular_products = [apply_offers(p) for p in popular_products]
+    new_added_products = [apply_offers(p) for p in new_added_products]
 
     context = {
         'categories': categories,
@@ -53,7 +57,6 @@ def home(request):
         'featured_products': featured_products,
         'new_added_products': new_added_products,
         'popular_products': popular_products,
-        'poster_products': poster_products,  # Add this to the context
         'title': 'Home',
     }
     return render(request, 'dashboard/home.html', context)
@@ -76,6 +79,9 @@ def list_prod(request):
     popular_products = Product.objects.filter(popular=True)
     new_added_products = Product.objects.filter(latest=True)
 
+    featured_products = [apply_offers(p) for p in featured_products]
+    popular_products = [apply_offers(p) for p in popular_products]
+    new_added_products = [apply_offers(p) for p in new_added_products]
 
     context = {
         'categories': categories,
@@ -99,6 +105,7 @@ def product_list_by_category(request, category_cid):
     if search_field:
         products = products.filter(title__icontains=search_field)
 
+    products = [apply_offers(p) for p in products]
 
     price_filter = request.GET.get('price_filter')
     if price_filter:
@@ -165,6 +172,7 @@ def product_detailed_view(request, product_pid):
     title = product.title
 
     # Apply offers to the product
+    product = apply_offers(product)
 
     # Sort the product_attributes based on price
     sorted_product_attributes = sorted(product_attributes, key=lambda attr: attr.price)
@@ -188,6 +196,295 @@ def get_price(request, size_id):
         return JsonResponse({'price': price})
     except ProductAttribute.DoesNotExist:
         return JsonResponse({'error': 'Product attribute not found'}, status=404)
+
+
+#=========================================== views related to user profile =================================================================================================================================
+
+@blocked_user_required
+@login_required
+def user_profile(request):
+    user = request.user
+    address = Address.objects.filter(user=user)
+    orders = CartOrder.objects.filter(user=user).order_by('-id')
+    wallet = Wallet.objects.filter(user=user).first()  # Get the user's wallet
+    wal_history = WalletHistory.objects.filter(wallet=wallet) if wallet else []  # Filter wallet history based on the user's wallet
+    item = ProductOrder.objects.filter(user=user)
+    
+    # Safely access referral_code
+    referral_code = None
+    if hasattr(user, 'sent_referrals') and user.sent_referrals:
+        referral_code = user.sent_referrals.my_referral
+
+    coupons = Coupon.objects.all()
+    print(user.phone_number)
+    
+    context = {
+        'user': user,
+        'item': item,
+        'referral_code': referral_code,
+        'wal_history': wal_history,
+        'address': address,
+        'orders': orders,
+        'title': 'User Profile',
+        'wallet': wallet,
+        'coupons': coupons
+    }
+
+    return render(request, 'dashboard/user_profile.html', context)
+
+
+@blocked_user_required
+@login_required
+def add_address(request):
+    source = request.GET.get('source', None)
+    print('Inside addaddress')
+    if request.method == 'POST':
+        street_address = request.POST.get('street_address')
+        city = request.POST.get('city')
+        state = request.POST.get('state')
+        postal_code = request.POST.get('postal_code')
+        country = request.POST.get('country')
+        print(street_address, city, state, postal_code, country)
+        address = Address.objects.create(
+            user = request.user,
+            street_address = street_address,
+            city = city,
+            state = state,
+            postal_code = postal_code,
+            country = country,
+        )
+        if source == 'profile_address':
+                return redirect('store:user_profile')
+        elif source == 'checkout_address':
+            return redirect('cart:checkout')
+        messages.success(request, """Address Added successfully
+                         Check the My Address Tab""")
+        # return redirect('store:user_profile')
+    
+    return render(request, 'dashboard/user_profil.html',{'address': address})
+
+
+@blocked_user_required
+@login_required
+def edit_address(request, address_id):
+    address = get_object_or_404(Address, id=address_id)
+    
+    if request.method == 'POST':
+        address.street_address = request.POST.get('street_address')
+        address.city = request.POST.get('city')
+        address.state = request.POST.get('state')
+        address.postal_code = request.POST.get('postal_code')
+        address.country = request.POST.get('country')
+        address.save()
+        
+        messages.success(request, "Address updated successfully")
+        return redirect('store:user_profile')
+    
+    return render(request, 'dashboard/user_profile.html', {'address': address})
+
+
+@blocked_user_required
+@login_required
+def delete_address(request, pk):
+    address = get_object_or_404(Address, pk=pk)
+    # Check if the logged-in user is the owner of the address
+    if request.user == address.user:
+        address.delete()
+    return redirect('store:user_profile')
+
+
+@blocked_user_required
+@login_required
+def edit_profile(request):
+    if request.method == 'POST':
+        # Retrieve user details from the request
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        username = request.POST.get('username')
+        phone_number = request.POST.get('phone_number')
+        user = request.user
+
+        # Update user details
+        user.first_name = first_name
+        user.last_name = last_name
+        user.username = username
+        user.phone_number = phone_number
+        user.save()
+
+        # Send email to the user
+        subject = 'Profile Updated'
+        message = 'Your profile has been successfully updated.'
+        send_mail(subject, message, None, [user.email])
+
+        # Redirect to user profile page
+        sweetify.toast(request, "Profile Updated Successfully", icon='success', timer=4000)
+        return redirect('store:user_profile')
+
+    return render(request, 'dashboard/user_profile.html', {'title':'User Profile','user':request.user})
+
+
+@login_required
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()  # Save the form and get the user
+            update_session_auth_hash(request, user)
+            sweetify.toast(request, 'Your password was successfully updated!', icon='success', timer=3000)
+            # Send email verification using the saved `user` object, not `request.user`
+            send_email_verification(user.email)
+            return redirect('accounts:logout')  # Redirect to a success page
+        else:
+            sweetify.toast(request, 'Please correct the error below.', icon='error', timer=3000)
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, 'dashboard/change_password.html', {'form': form})
+
+
+def send_email_verification(email):
+    print(f"Sending email verification to: {email}")
+    subject = 'Password Change Verification'
+    message = 'Your password has been successfully changed. If you did not make this change, please contact us immediately.'
+    from_email = 'mn8697865@gmail.com'  # Use your email
+    recipient_list = [email]
+    send_mail(subject, message, from_email, recipient_list)
+
+
+@blocked_user_required
+@login_required
+def user_order_detail(request, order_id):
+    order = get_object_or_404(CartOrder, id=order_id, user=request.user)
+    context = {
+        'order': order,
+    }
+    return render(request, 'dashboard/user_order_detail.html', context)
+
+
+@blocked_user_required
+@login_required
+def order_cancel(request, order_id):
+    order = get_object_or_404(CartOrder, id=order_id, user=request.user)
+    if order.status != 'Cancelled':
+        if order.payment_method == 'Razorpay' or order.payment_method == 'Wallet' or order.payment_method == 'Wallet-Razorpay':
+            # Logic for Razorpay refund to wallet
+            wallet, created = Wallet.objects.get_or_create(user=request.user)
+            wallet.balance += Decimal(order.order_total)
+            wallet.save()
+            WalletHistory.objects.create(
+                wallet=wallet,
+                transaction_type='Credit',
+                amount=order.order_total,
+                reason='Order Cancellation'
+            )
+        order.status = 'Cancelled'
+        order.save()
+        sweetify.toast(request, 'Your order has been cancelled and amount refunded to your wallet.',icon='success', timer=3000)
+    else:
+        sweetify.toast(request, 'Your order is already cancelled.',icon='warning', timer=3000)
+    return redirect('store:user_order_detail', order_id=order.id)
+
+
+@blocked_user_required
+@login_required
+def order_return(request, order_id):
+    order = get_object_or_404(CartOrder, id=order_id, user=request.user)
+
+    if request.method == 'POST':
+        sizing_issues = 'sizing_issues' in request.POST
+        damaged_item = 'damaged_item' in request.POST
+        incorrect_order = 'incorrect_order' in request.POST
+        delivery_delays = 'delivery_delays' in request.POST
+        customer_service = 'customer_service' in request.POST
+        other_reason = request.POST.get('description', '')
+
+        if order.status == 'Delivered':
+            print('order = ', order)
+            # Save the return request for admin review
+            ReturnReason.objects.create(
+                user=request.user,
+                order=order,
+                sizing_issues=sizing_issues,
+                damaged_item=damaged_item,
+                incorrect_order=incorrect_order,
+                delivery_delays=delivery_delays,
+                customer_service=customer_service,
+                other_reason=other_reason
+            )
+            order.status = 'Return Requested'
+            order.save()
+            sweetify.toast(request, 'Your return request has been submitted for review.', icon='success', timer=3000)
+        else:
+            sweetify.toast(request, 'Your order is not eligible for return.', icon='warning', timer=3000)
+
+        return redirect('store:user_order_detail', order_id=order.id)
+
+    return render(request, 'store/order_return.html', {'order': order})
+
+
+#=========================================== views related to filter, coupon, offers =================================================================================================================================
+
+
+def apply_offers(product):
+    product_attributes = ProductAttribute.objects.filter(product=product)
+    if not product_attributes.exists():
+        return product
+
+    product_attribute = product_attributes.first()  # Adjust logic if necessary to handle multiple attributes
+
+    product_offer = ProductOffer.objects.filter(product=product).first()
+    category_offer = CategoryOffer.objects.filter(category=product.category).first()
+
+    if product_offer and product_offer.is_active():
+        discount = product_offer.discount_percentage
+        product.final_price = product_attribute.price - (product_attribute.price * discount / 100)
+    elif category_offer and category_offer.is_active():
+        discount = category_offer.discount_percentage
+        product.final_price = product_attribute.price - (product_attribute.price * discount / 100)
+    else:
+        product.final_price = product_attribute.price
+
+    return product
+
+
+@blocked_user_required
+def list_coupon(request):
+    print("inside coupons")
+    today = timezone.now().date()
+    coupons = Coupon.objects.all()
+    # coupons = Coupon.objects.filter(active=True, active_date__lte=today, expiry_date__gte=today)
+    return render(request, 'dashboard/user_profile.html', {'coupons': coupons})
+    
+
+@blocked_user_required
+def filter_product(request):
+    try:
+        # Get the min and max price from the GET parameters
+        min_price = request.GET.get('min_price')
+        max_price = request.GET.get('max_price')
+        
+        # Filter products based on availability, category, and price range
+        products = Product.objects.filter(
+            is_available=True,
+            category__is_deleted=False,
+            category__is_blocked=False,
+            productattribute__is_deleted=False,
+            productattribute__price__gte=min_price,
+            productattribute__price__lte=max_price
+        ).distinct().order_by('-id')
+        
+        # Render the filtered products to HTML
+        data = render_to_string('dashboard/product_list.html', {"products": products})
+        
+        # Return the rendered HTML as a JSON response
+        return JsonResponse({"data": data})
+    except Exception as e:
+        # Handle any exceptions and return an error message
+        return JsonResponse({"error": str(e)})
+
+        
+        return JsonResponse({"data": data})
+    except Exception as e:
+        return JsonResponse({"error": str(e)})
 
 
 @blocked_user_required
@@ -263,6 +560,7 @@ def search_and_filter(request):
 
     return render(request, 'dashboard/search_and_filter.html', context)
 
+
 #=========================================== views related to shop =================================================================================================================================
 
 
@@ -326,7 +624,7 @@ def shop(request, category_id=None):
 
     # Context for template rendering
     context = {
-        'categories': categories,       
+        'categories': categories,
         'selected_category': selected_category,
         'products': page_obj,
         'total_products': products.count(),
@@ -339,10 +637,56 @@ def shop(request, category_id=None):
     return render(request, 'dashboard/shop.html', context)
 
 
-#=========================================== views related to user profile =================================================================================================================================
+
+
+
+
+#=========================================== views related to wishlist =================================================================================================================================
+
 
 @blocked_user_required
 @login_required
-def user_profile(request):
+def get_wishlist_count(request):
     user = request.user
-    address = Address.objects.filter(user=user)
+    wishlist_count = Wishlist.objects.filter(user=user).count() if user.is_authenticated else 0
+    return JsonResponse({'wishlist_count': wishlist_count})
+
+
+@blocked_user_required
+@login_required
+def wishlist(request):
+    context = {}
+    try:
+        items = Wishlist.objects.filter(user=request.user).prefetch_related('product__product_attributes')
+        context = {
+            'items': items,
+        }
+    except Wishlist.DoesNotExist:
+        pass
+    return render(request, 'dashboard/wishlist.html', context)
+
+
+@blocked_user_required
+@login_required
+def add_wishlist(request, product_pid):
+    if not request.user.is_authenticated:
+        messages.info(request, 'Login to access wishlist')
+        return redirect('accounts:login')
+    else:
+        try:
+            item = Wishlist.objects.get(user=request.user, product_id=product_pid)
+            sweetify.toast(request, 'Product is already in your wishlist', icon='info')
+        except Wishlist.DoesNotExist:
+            Wishlist.objects.create(user=request.user, product_id=product_pid)
+            sweetify.toast(request, 'Product added to your wishlist successfully', icon='success')
+        
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+
+
+@blocked_user_required
+@login_required
+def delete_wishlist(request, pk):
+    wishlist = get_object_or_404(Wishlist, id=pk, user=request.user)
+    wishlist.delete()
+    
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))

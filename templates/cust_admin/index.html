@@ -269,7 +269,7 @@
                                     <th class="col-md-1">Action</th>
                                 </tr>
                             </thead>
-                            {% comment %} <tbody>
+                             <tbody>
                                 {% for order in orders %}
                                     <tr>
                                         <td>{{ order.id }}</td>
@@ -284,14 +284,14 @@
                                         </td>
                                     </tr>
                                 {% endfor %}
-                            </tbody> {% endcomment %}
+                            </tbody> 
                         </table>
                     </div>
                 </div>
             </div>
             <div class="pagination-area mt-30 mb-50">
                 <nav aria-label="Page navigation example">
-                    {% comment %} <ul class="pagination justify-content-start">
+                     <ul class="pagination justify-content-start">
                         {% if orders.has_previous %}
                             <li class="page-item">
                                 <a class="page-link" href="?page={{ orders.previous_page_number }}" aria-label="Previous">
@@ -313,7 +313,7 @@
                                 </a>
                             </li>
                         {% endif %}
-                    </ul> {% endcomment %}
+                    </ul> 
                 </nav>
             </div>
         </section> <!-- content-main end// -->

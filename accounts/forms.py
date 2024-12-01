@@ -51,11 +51,16 @@ class SignUpForm(UserCreationForm):
         required=True,
         help_text='Required. Enter a valid phone number.'
     )
-    
+    referral_code = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={"placeholder": "Referral Code (optional)"}),
+        required=False,
+        help_text='Optional. Enter referral code if you have one.'
+    )
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'phone_number', 'password1', 'password2']
+        fields = ['username', 'first_name', 'last_name', 'email', 'phone_number', 'password1', 'password2', 'referral_code']
         labels = {'email': 'Email'}
 
     def clean_first_name(self):
@@ -89,7 +94,20 @@ class SignUpForm(UserCreationForm):
             raise ValidationError(_('Phone number should be at least 10 digits long.'))
         return phone_number
 
-   
+    # def clean_referral_code(self):
+    #     referral_code = self.cleaned_data.get('referral_code')
+    #     if referral_code and not Referral.objects.filter(my_referral=referral_code).exists():
+    #         raise ValidationError(_('Invalid referral code.'))
+    #     return referral_code
+def clean_referral_code(self):
+    referral_code = self.cleaned_data.get('referral_code', None)
+    if referral_code:  # Only validate if a code is provided
+        if not Referral.objects.filter(my_referral=referral_code).exists():
+            raise ValidationError(_('Invalid referral code.'))
+    return referral_code
+
+
+
     def clean(self):
         cleaned_data = super().clean()
         password1 = cleaned_data.get('password1')

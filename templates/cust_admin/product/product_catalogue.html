@@ -46,7 +46,7 @@
                                     <th scope="col">Image</th>
                                     <th scope="col">Size</th>
                                     <th scope="col">Category</th>
-                                    <th scope="col">Sub Category</th>
+                                    {% comment %} <th scope="col">Sub Category</th> {% endcomment %}
                                     <th scope="col">Price</th>
                                     <th>Stock</th> 
                                     <th scope="col" class="text-end">Action</th>
@@ -72,7 +72,7 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ product_attr.product.category }}</td>
-                                    <td>{{ product_attr.product.sub_category.sub_name }}</td>
+                                    {% comment %} <td>{{ product_attr.product.sub_category.sub_name }}</td> {% endcomment %}
                                     <td>{{product_attr.price}}</td>
                                     <td>{{ product_attr.stock }}</td>
                                     <td class="text-end">

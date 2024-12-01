@@ -125,7 +125,7 @@
                 <div class="col-12 mt-3">
                     <div class="card-footer text-muted">
                         <a href="{% url 'store:home' %}" class="btn btn-secondary">Back to Shop</a>&nbsp;&nbsp;
-                        <a href="{% url 'cart:order_invoice' order.id %}" class="btn btn-primary ">Download Invoice</a>
+                        {% comment %} <a href="{% url 'cart:order_invoice' order.id %}" class="btn btn-primary ">Download Invoice</a> {% endcomment %}
                     </div>
                 </div>
             </div>
